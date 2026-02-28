@@ -1,6 +1,19 @@
 import { Send, Image as ImageIcon, MapPin, Mic, Square } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
+/**
+ * Component for message input, location sharing, and voice/image uploads.
+ * 
+ * @param {Object} props
+ * @param {string} props.inputText - Current text in the input field.
+ * @param {Function} props.setInputText - Setter for input text.
+ * @param {Function} props.onSendText - Callback for sending text.
+ * @param {Function} props.onLocation - Callback for sharing location.
+ * @param {Function} props.onUploadClick - Callback for initiating file upload.
+ * @param {boolean} props.isRecording - Whether audio recording is active.
+ * @param {Function} props.onStartRecording - Callback to start recording.
+ * @param {Function} props.onStopRecording - Callback to stop recording.
+ */
 const ChatInput = ({
     inputText,
     setInputText,
@@ -11,6 +24,10 @@ const ChatInput = ({
     onStartRecording,
     onStopRecording
 }) => {
+    /**
+     * Handles keyboard shortcuts for the input field.
+     * @param {Event} e - Keyboard event.
+     */
     const handleKeyDown = (e) => {
         if (e.key === 'Enter') {
             onSendText();
@@ -45,7 +62,7 @@ const ChatInput = ({
                             />
                             <span className="text-sm font-medium animate-pulse">Recording...</span>
                         </div>
-                        <span className="text-xs text-wa-text-secondary italic">Slide to cancel (Simulated)</span>
+                        <span className="text-xs text-wa-text-secondary italic">Slide to cancel</span>
                     </div>
                 ) : (
                     <input

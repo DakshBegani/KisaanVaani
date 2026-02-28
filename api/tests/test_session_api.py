@@ -56,7 +56,7 @@ class TestSessionAPI(unittest.TestCase):
         # Verify context contents
         context = data['summary_context']
         self.assertEqual(len(context['inputs']['text']), 1)
-        self.assertEqual(len(context['inputs']['image_analyses']), 1)
+        self.assertEqual(len(context['inputs']['images']), 1)
         self.assertEqual(len(context['inputs']['voice_transcriptions']), 1)
         self.assertEqual(context['location']['lat'], 18.5204)
 

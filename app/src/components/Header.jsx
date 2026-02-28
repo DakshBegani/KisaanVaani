@@ -13,13 +13,6 @@ const Header = ({ onEndSession }) => {
                 </div>
             </div>
             <div className="flex items-center gap-4">
-                <button
-                    onClick={onEndSession}
-                    className="p-2 transition-all hover:bg-wa-input-bg rounded-full text-wa-teal"
-                    title="End Session"
-                >
-                    <Power size={20} />
-                </button>
                 <MoreVertical size={20} className="text-wa-text-secondary" />
             </div>
         </header>

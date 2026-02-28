@@ -8,12 +8,14 @@
   --wa-text: #111b21;
   --wa-text-secondary: #667781;
   --wa-teal: #00a884;
-  --wa-teal-light: #00d3a9;
-  --wa-border: rgba(0, 0, 0, 0.08);
   --wa-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   --wa-accent: #00a884;
 
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+.hidden {
+  display: none !important;
 }
 
 body {

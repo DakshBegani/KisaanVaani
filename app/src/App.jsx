@@ -14,14 +14,57 @@ function App() {
   const scrollRef = useRef(null);
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
+  const fileInputRef = useRef(null);
+  const warningTimerRef = useRef(null);
+  const autoSubmitTimerRef = useRef(null);
 
-  // Auto-scroll to bottom
+  /**
+   * Automatically scroll the chat to the bottom when new messages arrive.
+   */
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages]);
 
+  /**
+   * Manages inactivity timers for auto-submission.
+   */
+  const resetInactivityTimer = () => {
+    if (warningTimerRef.current) clearTimeout(warningTimerRef.current);
+    if (autoSubmitTimerRef.current) clearTimeout(autoSubmitTimerRef.current);
+
+    if (!sessionId) return;
+
+    // 30s Warning
+    warningTimerRef.current = setTimeout(() => {
+      addMessage('bot', '⚠️ Information will be submitted in 30 seconds for processing unless more information is sent.');
+    }, 30000);
+
+    // 60s Auto-End
+    autoSubmitTimerRef.current = setTimeout(() => {
+      handleEndSession(true); // pass true to indicate it was automatic
+    }, 60000);
+  };
+
+  /**
+   * Reset timer whenever session ID changes (session start).
+   */
+  useEffect(() => {
+    if (sessionId) {
+      resetInactivityTimer();
+    }
+    return () => {
+      if (warningTimerRef.current) clearTimeout(warningTimerRef.current);
+      if (autoSubmitTimerRef.current) clearTimeout(autoSubmitTimerRef.current);
+    };
+  }, [sessionId]);
+
+  /**
+   * Appends a new message to the chat state.
+   * @param {string} sender - 'user' or 'bot'.
+   * @param {string} text - Message content.
+   */
   const addMessage = (sender, text) => {
     setMessages(prev => [...prev, {
       id: Date.now(),
@@ -32,6 +75,10 @@ function App() {
     }]);
   };
 
+  /**
+   * Ensures a valid session exists, creating one if necessary.
+   * @returns {Promise<string>} - The active session ID.
+   */
   const ensureSession = async () => {
     if (sessionId) return sessionId;
     try {
@@ -45,6 +92,9 @@ function App() {
     }
   };
 
+  /**
+   * Handles sending a text message from the input field.
+   */
   const handleSendText = async () => {
     if (!inputText.trim()) return;
 
@@ -54,12 +104,16 @@ function App() {
 
     try {
       const currentSessionId = await ensureSession();
+      resetInactivityTimer();
       await chatApi.sendText(currentSessionId, text);
     } catch (err) {
       console.error('Failed to send text', err);
     }
   };
 
+  /**
+   * Handles capturing and sending the current geolocation.
+   */
   const handleLocation = async () => {
     try {
       const coords = await getCurrentPosition();
@@ -67,6 +121,7 @@ function App() {
       addMessage('user', `📍 My location: ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
 
       const currentSessionId = await ensureSession();
+      resetInactivityTimer();
       await chatApi.sendLocation(currentSessionId, latitude, longitude);
     } catch (err) {
       console.error('Location error', err);
@@ -74,6 +129,9 @@ function App() {
     }
   };
 
+  /**
+   * Starts audio recording using the MediaRecorder API.
+   */
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -86,16 +144,41 @@ function App() {
 
       mediaRecorderRef.current.onstop = async () => {
         const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-        addMessage('user', '🎤 Voice message sent');
+
+        // Temporary placeholder message
+        const tempId = Date.now();
+        setMessages(prev => [...prev, {
+          id: tempId,
+          sender: 'user',
+          text: '🎤 Sending voice message...',
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          status: 'sending'
+        }]);
 
         try {
           const currentSessionId = await ensureSession();
+          resetInactivityTimer();
           setIsLoading(true);
           const data = await chatApi.uploadVoice(currentSessionId, audioBlob);
-          addMessage('bot', `Transcribed: "${data.transcription}"`);
+
+          // Update with transcribed text AND audio URL
+          setMessages(prev => prev.map(m =>
+            m.id === tempId
+              ? {
+                ...m,
+                text: data.transcription,
+                voiceUrl: data.voice_url,
+                status: 'sent'
+              }
+              : m
+          ));
         } catch (err) {
           console.error('Voice upload failed', err);
-          addMessage('bot', 'Failed to process voice message.');
+          setMessages(prev => prev.map(m =>
+            m.id === tempId
+              ? { ...m, text: 'Failed to process voice message.', status: 'error' }
+              : m
+          ));
         } finally {
           setIsLoading(false);
         }
@@ -109,6 +192,9 @@ function App() {
     }
   };
 
+  /**
+   * Stops the active audio recording.
+   */
   const stopRecording = () => {
     if (mediaRecorderRef.current) {
       mediaRecorderRef.current.stop();
@@ -117,13 +203,21 @@ function App() {
     }
   };
 
-  const handleEndSession = async () => {
+  /**
+   * Ends the current session and displays the summary.
+   * @param {boolean} isAuto - Whether the session end was triggered automatically.
+   */
+  const handleEndSession = async (isAuto = false) => {
     if (!sessionId) {
-      addMessage('bot', 'No active session to summarize.');
+      if (!isAuto) addMessage('bot', 'No active session to summarize.');
       return;
     }
     setIsLoading(true);
-    addMessage('user', '🛑 End session and summarize.');
+    if (!isAuto) {
+      addMessage('user', '🛑 End session and summarize.');
+    } else {
+      addMessage('bot', '🕒 Inactivity detected. Automatically processing your information...');
+    }
 
     try {
       const data = await chatApi.endSession(sessionId);
@@ -137,12 +231,66 @@ function App() {
     }
   };
 
-  const handleUploadClick = (type) => {
-    addMessage('bot', `Simulating ${type} upload... (Session will initiate if needed)`);
+  /**
+   * Triggers the hidden file input for image selection.
+   */
+  const handleUploadClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  /**
+   * Handles single or multiple image uploads.
+   * @param {Event} event - File input change event.
+   */
+  const handleImageUpload = async (event) => {
+    const files = Array.from(event.target.files);
+    if (files.length === 0) return;
+
+    for (const file of files) {
+      const tempId = Date.now() + Math.random();
+      setMessages(prev => [...prev, {
+        id: tempId,
+        sender: 'user',
+        text: `Uploading ${file.name}...`,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        status: 'sending'
+      }]);
+
+      try {
+        const currentSessionId = await ensureSession();
+        resetInactivityTimer();
+        setIsLoading(true);
+        const data = await chatApi.uploadImage(currentSessionId, file);
+
+        setMessages(prev => prev.map(m =>
+          m.id === tempId
+            ? { ...m, text: '', imageUrl: data.image_url, status: 'sent' }
+            : m
+        ));
+      } catch (err) {
+        console.error('Image upload failed', err);
+        setMessages(prev => prev.map(m =>
+          m.id === tempId
+            ? { ...m, text: `Failed to upload ${file.name}`, status: 'error' }
+            : m
+        ));
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    event.target.value = '';
   };
 
   return (
     <div className="flex flex-col h-screen relative overflow-hidden bg-white chat-shadow">
+      <input
+        type="file"
+        ref={fileInputRef}
+        className="hidden"
+        accept="image/*"
+        multiple
+        onChange={handleImageUpload}
+      />
       <Header onEndSession={handleEndSession} />
 
       <MessageList
