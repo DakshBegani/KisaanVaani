@@ -2,7 +2,7 @@
  * Utility for interacting with the KisaanVaani backend API.
  */
 
-const API_BASE = 'http://localhost:5000';
+const API_BASE = 'http://localhost:5001';
 
 /**
  * Initiates a new user session.
