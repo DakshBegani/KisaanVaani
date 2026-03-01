@@ -7,6 +7,7 @@ import io
 from service.text import GPTModel
 from service.image import VisionModel
 from service.voice import AWSVoiceService
+from service.weather import OpenWeather
 
 app = Flask(__name__, static_folder='static')
 CORS(app)
@@ -16,7 +17,7 @@ VOICE_FOLDER = os.path.join('static', 'voice')
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(VOICE_FOLDER, exist_ok=True)
 
-# Session storage: {session_id: {"user_id": str, "text": [], "images": [], "voice": [], "location": dict}}
+# Session storage: {session_id: {"user_id": str, "messages": [], "location": dict}}
 sessions = {}
 
 class SessionManager:
@@ -36,10 +37,9 @@ class SessionManager:
         session_id = str(uuid.uuid4())
         sessions[session_id] = {
             "user_id": user_id,
-            "text": [],
-            "images": [],
-            "voice": [],
-            "location": None
+            "messages": [],
+            "location": None,
+            "weather": None
         }
         return session_id
 
@@ -70,6 +70,7 @@ class SessionManager:
 text_service = GPTModel()
 image_service = VisionModel()
 voice_service = AWSVoiceService()
+weather_service = OpenWeather()
 
 @app.route('/session/start', methods=['POST'])
 def start_session():
@@ -90,7 +91,7 @@ def post_text():
     if not session:
         return jsonify({"error": "Invalid session ID"}), 404
     
-    session['text'].append(text)
+    session['messages'].append({"type": "text", "content": text})
     return jsonify({"status": "text added"}), 200
 
 @app.route('/session/image', methods=['POST'])
@@ -123,11 +124,11 @@ def upload_image():
             analysis = f"Analysis failed: {str(e)}"
             
         image_info = {
+            "type": "image",
             "url": image_url,
-            "filename": filename,
-            "analysis": analysis
+            "filename": filename
         }
-        session['images'].append(image_info)
+        session['messages'].append(image_info)
         
         return jsonify({
             "status": "image uploaded",
@@ -164,11 +165,11 @@ def post_voice():
             transcription = f"Transcription failed: {str(e)}"
             
         voice_info = {
+            "type": "voice",
             "url": voice_url,
-            "filename": filename,
-            "transcription": transcription
+            "filename": filename
         }
-        session['voice'].append(voice_info)
+        session['messages'].append(voice_info)
         
         return jsonify({
             "status": "voice uploaded",
@@ -191,7 +192,15 @@ def post_location():
         return jsonify({"error": "Invalid session ID"}), 404
     
     session['location'] = {"lat": lat, "lon": lon}
-    return jsonify({"status": "location updated"}), 200
+    
+    # Fetch weather data as soon as location is shared
+    try:
+        weather_data = weather_service.get_weather(lat, lon)
+        session['weather'] = weather_data
+    except Exception as e:
+        session['weather'] = {"error": str(e)}
+        
+    return jsonify({"status": "location updated", "weather": session['weather']}), 200
 
 @app.route('/session/end', methods=['POST'])
 def end_session():
@@ -206,11 +215,8 @@ def end_session():
     context = {
         "user_id": session["user_id"],
         "location": session["location"],
-        "inputs": {
-            "text": session["text"],
-            "images": session["images"],
-            "voice_transcriptions": session["voice"]
-        }
+        "weather": session["weather"],
+        "messages": session["messages"]
     }
     
     query = "Summarize the session and provide agricultural advice based on all inputs provided."
