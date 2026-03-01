@@ -4,10 +4,10 @@ from flask import Flask, request, jsonify, url_for
 from flask_cors import CORS
 from PIL import Image as PILImage
 import io
-from service.text import GPTModel
-from service.image import VisionModel
-from service.voice import AWSVoiceService
-from service.weather import OpenWeather
+from api.service.llm.text import GPTModel
+from api.service.llm.vision import VisionModel
+from api.service.speech.aws_voice import AWSVoiceService
+from api.service.weather.openweather import OpenWeather
 
 app = Flask(__name__, static_folder='static')
 CORS(app)
@@ -109,7 +109,7 @@ def upload_image():
         file_path = os.path.join(UPLOAD_FOLDER, filename)
         
         # Use Pillow to resize
-        img = PILImage.open(image_file)
+        img = PILImage.open(image_file.stream)
         max_size = (800, 800)
         img.thumbnail(max_size)
         img.save(file_path, optimize=True, quality=85)
