@@ -7,6 +7,8 @@ import io
 from service.text import GPTModel
 from service.image import VisionModel
 from service.voice import AWSVoiceService
+from service.weather import OpenWeather
+from service.alert import AlertService, DynamoAlertDB
 
 app = Flask(__name__, static_folder='static')
 CORS(app)
@@ -70,6 +72,8 @@ class SessionManager:
 text_service = GPTModel()
 image_service = VisionModel()
 voice_service = AWSVoiceService()
+weather_service = OpenWeather()
+alert_service = AlertService(db=DynamoAlertDB(), weather_api=weather_service, text_model=text_service)
 
 @app.route('/session/start', methods=['POST'])
 def start_session():
@@ -223,6 +227,44 @@ def end_session():
         "response": response_text,
         "summary_context": context
     }), 200
+
+@app.route('/alerts/generate', methods=['POST'])
+def generate_alerts():
+    """
+    Generates weather alerts for active users based on abnormal weather conditions.
+    
+    Expected payload:
+    {
+        "users": [
+            {
+                "user_id": "user123",
+                "latitude": 28.7041,
+                "longitude": 77.1025,
+                "crop_type": "wheat",
+                "farming_method": "organic"
+            }
+        ]
+    }
+    """
+    data = request.json
+    users = data.get('users', [])
+    
+    if not users:
+        return jsonify({"error": "No users provided"}), 400
+    
+    try:
+        alerts = alert_service.generate_weather_alerts(users)
+        
+        return jsonify({
+            "status": "success",
+            "alerts_generated": len(alerts),
+            "alerts": alerts
+        }), 200
+        
+    except Exception as e:
+        return jsonify({
+            "error": f"Failed to generate alerts: {str(e)}"
+        }), 500
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
