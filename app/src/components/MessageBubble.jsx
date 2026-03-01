@@ -15,12 +15,13 @@ const MessageBubble = ({ msg }) => {
         <motion.div
             initial={{ opacity: 0, y: 10, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}
+            transition={{ duration: 0.3, ease: "easeOut" }}
+            className={`flex ${isUser ? 'justify-end' : 'justify-start'} mb-1`}
         >
             <div
-                className={`max-w-[85%] p-2 px-3 rounded-lg relative shadow-sm border border-black/5 ${isUser
-                    ? 'bg-wa-bubble-out rounded-tr-none'
-                    : 'bg-wa-bubble-in rounded-tl-none'
+                className={`max-w-[80%] p-2.5 px-3 rounded-lg relative message-shadow ${isUser
+                    ? 'bg-wa-bubble-out rounded-tr-sm'
+                    : 'bg-wa-bubble-in rounded-tl-sm'
                     }`}
             >
                 {msg.imageUrl && (
@@ -51,22 +52,17 @@ const MessageBubble = ({ msg }) => {
                         </audio>
                     </div>
                 )}
-                <p className="text-[14.5px] leading-relaxed text-[#111b21]">
+                <p className="text-[14.5px] leading-relaxed text-[#111b21] break-words">
                     {msg.text}
                 </p>
                 <div className="flex items-center justify-end gap-1 mt-1">
-                    <span className="text-[10px] text-wa-text-secondary uppercase select-none">
+                    <span className="text-[11px] text-wa-text-secondary select-none">
                         {msg.timestamp}
                     </span>
                     {isUser && (
-                        <CheckCheck size={14} className="text-wa-teal" />
+                        <CheckCheck size={16} className="text-[#53bdeb] flex-shrink-0" />
                     )}
                 </div>
-
-                <div className={`absolute top-0 w-2 h-2 ${isUser
-                    ? 'right-[-8px] border-l-[8px] border-l-wa-bubble-out border-b-[8px] border-b-transparent'
-                    : 'left-[-8px] border-r-[8px] border-r-wa-bubble-in border-b-[8px] border-b-transparent'
-                    }`} />
             </div>
         </motion.div>
     );

@@ -11,12 +11,27 @@ function App() {
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
   const scrollRef = useRef(null);
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
   const fileInputRef = useRef(null);
   const warningTimerRef = useRef(null);
   const autoSubmitTimerRef = useRef(null);
+
+  /**
+   * Show welcome message on mount
+   */
+  useEffect(() => {
+    const welcomeMessage = {
+      id: Date.now(),
+      sender: 'bot',
+      text: '🌾 Welcome to KisaanVaani! I\'m your agricultural advisor. You can send me text messages, share your location for weather updates, upload images of crops, or send voice messages. How can I help you today?',
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      status: 'sent'
+    };
+    setMessages([welcomeMessage]);
+  }, []);
 
   /**
    * Automatically scroll the chat to the bottom when new messages arrive.
@@ -159,6 +174,7 @@ function App() {
           const currentSessionId = await ensureSession();
           resetInactivityTimer();
           setIsLoading(true);
+          setIsTyping(true);
           const data = await chatApi.uploadVoice(currentSessionId, audioBlob);
 
           // Update with transcribed text AND audio URL
@@ -181,6 +197,7 @@ function App() {
           ));
         } finally {
           setIsLoading(false);
+          setIsTyping(false);
         }
       };
 
@@ -213,6 +230,7 @@ function App() {
       return;
     }
     setIsLoading(true);
+    setIsTyping(true);
     if (!isAuto) {
       addMessage('user', '🛑 End session and summarize.');
     } else {
@@ -228,6 +246,7 @@ function App() {
       addMessage('bot', 'Failed to generate session summary.');
     } finally {
       setIsLoading(false);
+      setIsTyping(false);
     }
   };
 
@@ -260,6 +279,7 @@ function App() {
         const currentSessionId = await ensureSession();
         resetInactivityTimer();
         setIsLoading(true);
+        setIsTyping(true);
         const data = await chatApi.uploadImage(currentSessionId, file);
 
         setMessages(prev => prev.map(m =>
@@ -276,13 +296,14 @@ function App() {
         ));
       } finally {
         setIsLoading(false);
+        setIsTyping(false);
       }
     }
     event.target.value = '';
   };
 
   return (
-    <div className="flex flex-col h-screen relative overflow-hidden bg-white chat-shadow">
+    <div className="flex flex-col h-screen relative overflow-hidden bg-white">
       <input
         type="file"
         ref={fileInputRef}
@@ -291,7 +312,7 @@ function App() {
         multiple
         onChange={handleImageUpload}
       />
-      <Header onEndSession={handleEndSession} />
+      <Header isTyping={isTyping} />
 
       <MessageList
         messages={messages}
