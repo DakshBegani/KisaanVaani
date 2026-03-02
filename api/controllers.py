@@ -1,9 +1,14 @@
 import os
+import sys
 import uuid
 from flask import Flask, request, jsonify, url_for
 from flask_cors import CORS
 from PIL import Image as PILImage
 import io
+
+# Add parent directory to path for imports
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 from api.service.llm.text import GPTModel
 from api.service.llm.vision import VisionModel
 from api.service.speech.aws_voice import AWSVoiceService
