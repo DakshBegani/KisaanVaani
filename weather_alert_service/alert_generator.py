@@ -15,10 +15,8 @@ class AlertGenerator:
         try:
             if "error" in weather_data:
                 return {
-                    "alert_type": "warning",
-                    "message": "Unable to fetch weather data. Please try again.",
-                    "risk_level": "Medium",
-                    "advice": "Check your internet connection and location settings.",
+                    "alert": "Unable to fetch weather data. Please try again.",
+                    "advice": "Check your internet connection and location settings."
                 }
 
             context = {
@@ -28,19 +26,27 @@ class AlertGenerator:
             }
 
             user_input = f"""
-            Based on the weather data provided, generate a simple weather alert for a farmer.
+            Based on the weather data provided, generate a weather alert for a farmer.
             
             Location: Latitude {location_context.get('latitude')}, Longitude {location_context.get('longitude')}
             
-            If weather is abnormal or risky (high wind, extreme temp, heavy rain, frost), generate a warning.
-            If weather is normal, generate an info message.
+            Format the response EXACTLY like this (no field labels, just the content):
+            
+            ⚠️ ALERT!
+            [Write 1-2 sentences about the weather condition]
+            
+            [Write specific farming advice on what to do]
             
             Respond ONLY in JSON format:
             {{
-                "alert_type": "warning|info",
-                "message": "Brief alert (1-2 sentences)",
-                "risk_level": "Low|Medium|High",
+                "alert": "Weather condition message (1-2 sentences)",
                 "advice": "Specific farming advice"
+            }}
+            
+            Example:
+            {{
+                "alert": "Heavy rainfall expected in your area today. Wind speed reaching 45 km/h.",
+                "advice": "Postpone spraying pesticides until tomorrow. Cover harvested crops. Ensure proper drainage in fields."
             }}
             """
 
@@ -48,23 +54,17 @@ class AlertGenerator:
             
             if isinstance(result, dict) and "error" not in result:
                 return {
-                    "alert_type": result.get("alert_type", "info"),
-                    "message": result.get("message", "Weather data received."),
-                    "risk_level": result.get("risk_level", "Low"),
+                    "alert": result.get("alert", "Weather data received."),
                     "advice": result.get("advice", "Continue with regular farming activities.")
                 }
             
             return {
-                "alert_type": "info",
-                "message": "Weather data received. Conditions appear normal.",
-                "risk_level": "Low",
+                "alert": "Weather data received. Conditions appear normal.",
                 "advice": "Continue with regular farming activities."
             }
 
         except Exception as e:
             return {
-                "alert_type": "warning",
-                "message": f"Error generating alert: {str(e)}",
-                "risk_level": "Medium",
+                "alert": f"Error generating alert: {str(e)}",
                 "advice": "Please try again later."
             }
