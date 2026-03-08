@@ -7,7 +7,7 @@ import boto3
 class BedrockModel:
     def __init__(self):
         self.client = boto3.client("bedrock-runtime", region_name="ap-south-1")
-        self.model_id = "global.anthropic.claude-sonnet-4-6"
+        self.model_id = "apac.amazon.nova-pro-v1:0"
 
     def _format_messages(self, history, user_input):
         messages = []
@@ -67,3 +67,21 @@ class BedrockModel:
             return json.loads(match.group())
 
         return {"error": "Invalid JSON from model", "raw": text_output}
+
+
+if __name__ == "__main__":
+    model = BedrockModel()
+
+    context = {
+        "history": [],
+        "user_profile": "Wheat farmer in Punjab, 5 acres, uses drip irrigation",
+        "weather": "Sunny, 28°C, humidity 40%, no rain expected for 7 days",
+    }
+
+    user_input = "My wheat leaves are turning yellow, what should I do?"
+    print(f"User: {user_input}\n")
+
+    result = model.generate_response(user_input, context)
+    print("Response:")
+    print(json.dumps(result, indent=2, ensure_ascii=False))
+

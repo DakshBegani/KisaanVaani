@@ -1,8 +1,9 @@
 /**
  * Utility for interacting with the KisaanVaani backend API.
+ * In development the Vite proxy forwards /session/* to http://localhost:5001.
  */
 
-const API_BASE = 'http://localhost:5001';
+const API_BASE = import.meta.env.VITE_API_BASE ?? '';
 
 /**
  * Initiates a new user session.
@@ -22,14 +23,15 @@ export const startSession = async (userId = 'farmer_123') => {
  * Sends a text message to the current session.
  * @param {string} sessionId - The active session ID.
  * @param {string} text - Message content.
- * @returns {Promise<void>}
+ * @returns {Promise<Object>} - Response with AI reply.
  */
 export const sendText = async (sessionId, text) => {
-    await fetch(`${API_BASE}/session/text`, {
+    const res = await fetch(`${API_BASE}/session/text`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ session_id: sessionId, text })
     });
+    return res.json();
 };
 
 /**
@@ -37,14 +39,15 @@ export const sendText = async (sessionId, text) => {
  * @param {string} sessionId - The active session ID.
  * @param {number} latitude - Latitude coordinate.
  * @param {number} longitude - Longitude coordinate.
- * @returns {Promise<void>}
+ * @returns {Promise<Object>} - Response with weather summary.
  */
 export const sendLocation = async (sessionId, latitude, longitude) => {
-    await fetch(`${API_BASE}/session/location`, {
+    const res = await fetch(`${API_BASE}/session/location`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ session_id: sessionId, latitude, longitude })
     });
+    return res.json();
 };
 
 /**

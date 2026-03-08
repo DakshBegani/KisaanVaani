@@ -116,13 +116,20 @@ function App() {
     const text = inputText;
     setInputText('');
     addMessage('user', text);
+    setIsLoading(true);
+    setIsTyping(true);
 
     try {
       const currentSessionId = await ensureSession();
       resetInactivityTimer();
-      await chatApi.sendText(currentSessionId, text);
+      const data = await chatApi.sendText(currentSessionId, text);
+      if (data?.response) addMessage('bot', data.response);
     } catch (err) {
       console.error('Failed to send text', err);
+      addMessage('bot', 'Failed to reach the server. Please check your connection.');
+    } finally {
+      setIsLoading(false);
+      setIsTyping(false);
     }
   };
 
@@ -130,6 +137,8 @@ function App() {
    * Handles capturing and sending the current geolocation.
    */
   const handleLocation = async () => {
+    setIsLoading(true);
+    setIsTyping(true);
     try {
       const coords = await getCurrentPosition();
       const { latitude, longitude } = coords;
@@ -137,10 +146,14 @@ function App() {
 
       const currentSessionId = await ensureSession();
       resetInactivityTimer();
-      await chatApi.sendLocation(currentSessionId, latitude, longitude);
+      const data = await chatApi.sendLocation(currentSessionId, latitude, longitude);
+      if (data?.weather_summary) addMessage('bot', data.weather_summary);
     } catch (err) {
       console.error('Location error', err);
       addMessage('bot', err.message || 'Failed to get location.');
+    } finally {
+      setIsLoading(false);
+      setIsTyping(false);
     }
   };
 
@@ -177,17 +190,19 @@ function App() {
           setIsTyping(true);
           const data = await chatApi.uploadVoice(currentSessionId, audioBlob);
 
-          // Update with transcribed text AND audio URL
+          // Update placeholder with transcription + audio URL
           setMessages(prev => prev.map(m =>
             m.id === tempId
               ? {
                 ...m,
-                text: data.transcription,
+                text: data.transcription || '🎤 Voice message',
                 voiceUrl: data.voice_url,
                 status: 'sent'
               }
               : m
           ));
+          // Show bot AI response
+          if (data?.response) addMessage('bot', data.response);
         } catch (err) {
           console.error('Voice upload failed', err);
           setMessages(prev => prev.map(m =>
@@ -287,6 +302,8 @@ function App() {
             ? { ...m, text: '', imageUrl: data.image_url, status: 'sent' }
             : m
         ));
+        // Show AI crop analysis
+        if (data?.analysis) addMessage('bot', data.analysis);
       } catch (err) {
         console.error('Image upload failed', err);
         setMessages(prev => prev.map(m =>

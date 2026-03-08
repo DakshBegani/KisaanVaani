@@ -3,3 +3,7 @@ flask-cors
 requests
 python-dotenv
 Pillow
+boto3
+mypy-boto3-polly
+mypy-boto3-s3
+mypy-boto3-transcribe
